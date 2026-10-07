@@ -1,5 +1,5 @@
 /* ============================================================
-   STORE.JS — XHR API (FIX iOS)
+   STORE.JS — XHR API (FIX iOS + RAILWAY)
    ============================================================ */
 
 var ADMIN_EMAIL = 'leminhdz@gmail.com';
@@ -15,17 +15,21 @@ function fmtDate(ts) {
   return p(d.getDate()) + '/' + p(d.getMonth()+1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
 function esc(s) {
-  return String(s || '').replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
 }
 function getToolImage(t) { return t ? (t.image || t.image_base64 || '') : ''; }
 
-/* ==================== API (XHR) ==================== */
+/* ==================== API — XMLHttpRequest ==================== */
 function api(action, params, method) {
   params = params || {};
   method = method || 'POST';
+
   return new Promise(function(resolve) {
     var base = (window.CONFIG && window.CONFIG.API_BASE) ? window.CONFIG.API_BASE : '';
     if (!base) return resolve({ success: false, error: 'Chưa cấu hình API_BASE' });
+
     if (base.indexOf('http') !== 0) base = window.location.origin + base;
     var url = base.replace(/\/$/, '') + '/index.php?action=' + encodeURIComponent(action);
 
@@ -37,15 +41,24 @@ function api(action, params, method) {
 
     xhr.onload = function() {
       var text = xhr.responseText || '';
-      if (!text || text.trim() === '') return resolve({ success: false, error: 'Server rỗng' });
-      try { resolve(JSON.parse(text)); }
-      catch (e) { resolve({ success: false, error: 'Server lỗi (không phải JSON)' }); }
+      if (!text || text.trim() === '') {
+        return resolve({ success: false, error: 'Server rỗng' });
+      }
+      try {
+        resolve(JSON.parse(text));
+      } catch (e) {
+        resolve({ success: false, error: 'Server lỗi (không phải JSON)' });
+      }
     };
     xhr.onerror = function() { resolve({ success: false, error: 'Không kết nối server' }); };
     xhr.ontimeout = function() { resolve({ success: false, error: 'Server không phản hồi' }); };
+
     if (method === 'POST') {
-      try { xhr.send(JSON.stringify(params)); } catch(e) { resolve({ success: false, error: 'Lỗi gửi' }); }
-    } else xhr.send();
+      try { xhr.send(JSON.stringify(params)); }
+      catch(e) { resolve({ success: false, error: 'Lỗi gửi: ' + e.message }); }
+    } else {
+      xhr.send();
+    }
   });
 }
 
@@ -67,6 +80,7 @@ function refreshUser(user) {
   if (s) { s.user = user; localStorage.setItem(SESS_KEY, JSON.stringify(s)); }
 }
 
+/* ==================== WRAPPERS ==================== */
 function apiGetUser() {
   var s = getSession();
   if (!s) return Promise.resolve({ success: false });
@@ -98,6 +112,7 @@ function setAvatarToStorage(src) {
   try { if (src) localStorage.setItem(AVATAR_KEY, src); else localStorage.removeItem(AVATAR_KEY); } catch(e) {}
 }
 
+/* ==================== EXPOSE ==================== */
 window.api = api;
 window.apiGetUser = apiGetUser;
 window.apiBuyPackage = apiBuyPackage;
@@ -110,7 +125,11 @@ window.applyAvatarEverywhere = applyAvatarEverywhere;
 window.getAvatarFromStorage = getAvatarFromStorage;
 window.setAvatarToStorage = setAvatarToStorage;
 window.getToolImage = getToolImage;
-window.fmt = fmt; window.fmtDate = fmtDate; window.esc = esc; window.now = now;
+window.fmt = fmt;
+window.fmtDate = fmtDate;
+window.esc = esc;
+window.now = now;
 window.DEFAULT_AVATAR = DEFAULT_AVATAR;
 window.ADMIN_EMAIL = ADMIN_EMAIL;
-window.SESS_KEY = SESS_KEY; window.AVATAR_KEY = AVATAR_KEY;
+window.SESS_KEY = SESS_KEY;
+window.AVATAR_KEY = AVATAR_KEY;

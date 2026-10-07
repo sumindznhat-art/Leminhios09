@@ -1,5 +1,5 @@
 /* ============================================================
-   ADMIN.JS — QUẢN TRỊ HOÀN CHỈNH
+   ADMIN.JS — QUẢN TRỊ HOÀN CHỈNH (BASE64 UPLOAD)
    ============================================================ */
 
 function openAdmin() {
@@ -31,9 +31,10 @@ function switchAdminTab(t) {
   var target = document.getElementById(map[t]); if (target) target.style.display = '';
 }
 
-/* ============ NÉN ẢNH ============ */
+/* ==================== NÉN ẢNH → BASE64 ==================== */
 function fileToBase64(file, maxSize, quality) {
-  maxSize = maxSize || 800; quality = quality || 0.8;
+  maxSize = maxSize || 800;
+  quality = quality || 0.8;
   return new Promise(function(resolve) {
     if (!file) return resolve('');
     if (file.type.indexOf('image/') !== 0) return resolve('');
@@ -50,7 +51,7 @@ function fileToBase64(file, maxSize, quality) {
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         var result = canvas.toDataURL('image/jpeg', quality);
-        if (result.length > 1024*1024) result = canvas.toDataURL('image/jpeg', 0.6);
+        if (result.length > 1024 * 1024) result = canvas.toDataURL('image/jpeg', 0.6);
         resolve(result);
       };
       img.onerror = function() { resolve(''); };
@@ -61,7 +62,7 @@ function fileToBase64(file, maxSize, quality) {
   });
 }
 
-/* ============ 1. DUYỆT TIỀN ============ */
+/* ==================== 1. DUYỆT TIỀN ==================== */
 function renderAdminPending() {
   var s = getSession(); if (!s) return;
   var el = document.getElementById('adminPendingView'); if (!el) return;
@@ -115,7 +116,7 @@ function rejectDeposit(id) {
   });
 }
 
-/* ============ 2. USERS ============ */
+/* ==================== 2. USERS ==================== */
 function renderAdminUsers() {
   var s = getSession(); if (!s) return;
   var el = document.getElementById('adminUsersView'); if (!el) return;
@@ -180,7 +181,7 @@ function adminDeleteUser(email) {
   });
 }
 
-/* ============ 3. TOOLS ============ */
+/* ==================== 3. TOOLS + CẤU HÌNH ==================== */
 function renderAdminTools() {
   var el = document.getElementById('adminToolsView'); if (!el) return;
   var ports = window.CONFIG.ports || [];
@@ -196,14 +197,22 @@ function renderAdminTools() {
     '<input class="adm-input" id="cfgMarquee" value="' + esc(window.CONFIG.marquee||'') + '">' +
     '<label style="font-size:11px;font-weight:700">Footer</label>' +
     '<input class="adm-input" id="cfgFooter" value="' + esc(window.CONFIG.footer||'') + '">' +
-    '<label style="font-size:11px;font-weight:700">🎵 URL nhạc nền</label>' +
+    '<label style="font-size:11px;font-weight:700">🎵 URL nhạc nền (.mp3)</label>' +
     '<input class="adm-input" id="cfgMusicUrl" value="' + esc(window.CONFIG.music_url||'') + '" placeholder="https://.../music.mp3">' +
-    '<button class="adm-btn" style="padding:6px;font-size:11px;background:#10b981;margin-top:6px" onclick="testMusic()">▶️ Nghe thử nhạc</button>' +
+    '<button class="adm-btn" style="padding:6px;font-size:11px;background:#10b981;margin-top:6px" onclick="testMusic()">▶️ Nghe thử</button>' +
+
     '<div style="background:#fff;border-radius:10px;padding:10px;margin-top:10px;border:1px solid #bfdbfe">' +
       '<div style="font-size:12px;font-weight:800;color:#1e40af;margin-bottom:8px">🖼️ LOGO</div>' +
       '<input type="file" id="cfgLogoFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">' +
       (logo ? '<div style="text-align:center;margin-top:6px"><img src="' + logo + '" style="max-width:80px;border-radius:50%"></div>' : '') +
     '</div>' +
+
+    '<div style="background:#fff;border-radius:10px;padding:10px;margin-top:10px;border:1px solid #bfdbfe">' +
+      '<div style="font-size:12px;font-weight:800;color:#1e40af;margin-bottom:8px">👤 AVATAR MẶC ĐỊNH</div>' +
+      '<input type="file" id="cfgAvatarFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">' +
+      (avatar ? '<div style="text-align:center;margin-top:6px"><img src="' + avatar + '" style="max-width:80px;border-radius:50%"></div>' : '') +
+    '</div>' +
+
     '<div style="background:#fff;border-radius:10px;padding:10px;margin-top:10px;border:1px solid #bfdbfe">' +
       '<div style="font-size:12px;font-weight:800;color:#1e40af;margin-bottom:8px">🏦 BANK + QR</div>' +
       '<label style="font-size:11px;font-weight:700">Tên NH</label>' +
@@ -216,17 +225,18 @@ function renderAdminTools() {
       '<input type="file" id="cfgQRFile" accept="image/*" class="adm-input" style="padding:5px;font-size:11px">' +
       (bank.qr ? '<div style="text-align:center;margin-top:6px"><img src="' + bank.qr + '" style="max-width:100px;border-radius:8px"></div>' : '') +
     '</div>' +
+
     '<button class="adm-btn" style="background:linear-gradient(135deg,#22c55e,#16a34a);margin-top:12px;padding:14px;font-size:14px" onclick="saveSiteConfig()">💾 LƯU CẤU HÌNH</button>' +
   '</div>';
 
   html += '<div class="adm-section">' +
-    '<h4>➕ THÊM TOOL MỚI</h4>' +
+    '<h4>➕ THÊM TOOL</h4>' +
     '<input class="adm-input" id="ntName" placeholder="Tên tool">' +
     '<select class="adm-input" id="ntCat"><option value="taixiu">🎲 Tài Xỉu</option><option value="sicbo">🎰 Sicbo</option><option value="baccarat">🃏 Baccarat</option></select>' +
     '<select class="adm-input" id="ntKind"><option value="view">👁 View</option><option value="panel">📊 Panel</option></select>' +
     '<input class="adm-input" id="ntGameUrl" placeholder="URL Game">' +
     '<input class="adm-input" id="ntApiUrl" placeholder="API URL">' +
-    '<input class="adm-input" id="ntSort" type="number" value="99" placeholder="Thứ tự">' +
+    '<input class="adm-input" id="ntSort" type="number" value="99">' +
     '<input type="file" id="ntImage" accept="image/*" class="adm-input" style="padding:5px">' +
     '<button class="adm-btn" style="background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="addNewTool()">➕ THÊM</button>' +
   '</div>';
@@ -267,7 +277,7 @@ function renderAdminTools() {
 function saveSiteConfig() {
   function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
 
-  window.CONFIG.site_name = val('cfgSiteName') || 'TOOL';
+  window.CONFIG.site_name = val('cfgSiteName') || 'TOOL MINHIOS';
   window.CONFIG.marquee = val('cfgMarquee');
   window.CONFIG.footer = val('cfgFooter');
   window.CONFIG.music_url = val('cfgMusicUrl');
@@ -278,10 +288,12 @@ function saveSiteConfig() {
   window.CONFIG.bank.owner = val('cfgBankOwner');
 
   var logoFile = document.getElementById('cfgLogoFile').files[0];
+  var avatarFile = document.getElementById('cfgAvatarFile').files[0];
   var qrFile = document.getElementById('cfgQRFile').files[0];
 
   var chain = Promise.resolve();
   if (logoFile) chain = chain.then(function() { return fileToBase64(logoFile, 300, 0.85).then(function(b64) { if (b64) window.CONFIG.logo = b64; }); });
+  if (avatarFile) chain = chain.then(function() { return fileToBase64(avatarFile, 300, 0.85).then(function(b64) { if (b64) window.CONFIG.avatar = b64; }); });
   if (qrFile) chain = chain.then(function() { return fileToBase64(qrFile, 600, 0.85).then(function(b64) { if (b64) window.CONFIG.bank.qr = b64; }); });
 
   chain.then(function() {
@@ -362,7 +374,6 @@ function editTool(idx) {
   var s = getSession();
   api('config_save', { email: s.email, password: s.password, config: window.CONFIG }).then(function(res) {
     if (res && res.success) { alert('✅ Đã sửa'); renderAdminTools(); if (typeof buildPorts === 'function') buildPorts(); }
-    else alert('❌ ' + ((res && res.error) || 'Lỗi'));
   });
 }
 
@@ -387,7 +398,7 @@ function deleteTool(idx) {
   });
 }
 
-/* ============ 4. KEYS ============ */
+/* ==================== 4. KEYS ==================== */
 function renderAdminKeys() {
   var s = getSession(); if (!s) return;
   var el = document.getElementById('adminKeysView'); if (!el) return;
@@ -397,8 +408,8 @@ function renderAdminKeys() {
 
     var html = '<div class="adm-section">' +
       '<h4>🔑 TẠO KEY</h4>' +
-      '<input class="adm-input" id="keyDays" type="number" value="30" placeholder="Số ngày">' +
-      '<input class="adm-input" id="keyQty" type="number" value="1" placeholder="Số lượng">' +
+      '<input class="adm-input" id="keyDays" type="number" value="30">' +
+      '<input class="adm-input" id="keyQty" type="number" value="1">' +
       '<input class="adm-input" id="keyNote" placeholder="Ghi chú">' +
       '<button class="adm-btn" style="background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="adminGenKeys()">➕ TẠO KEY</button>' +
     '</div>';
@@ -440,11 +451,10 @@ function adminDelKey(code) {
   var s = getSession();
   api('key_delete', { email: s.email, password: s.password, code: code }).then(function(res) {
     if (res && res.success) { alert('✅ Đã xoá'); renderAdminKeys(); }
-    else alert('❌ ' + ((res && res.error) || 'Lỗi'));
   });
 }
 
-/* ============ 5. LỊCH SỬ ============ */
+/* ==================== 5. LỊCH SỬ ==================== */
 function renderAdminHistory() {
   var s = getSession(); if (!s) return;
   var el = document.getElementById('adminHistoryView'); if (!el) return;
@@ -453,7 +463,7 @@ function renderAdminHistory() {
     var hist = (res && res.success) ? (res.history || []) : [];
     if (!hist.length) { el.innerHTML = '<p style="text-align:center;color:#94a3b8">Chưa có giao dịch</p>'; return; }
 
-    var html = '<p style="text-align:center;font-size:12px;color:#64748b;margin-bottom:8px">' + Math.min(hist.length, 100) + ' / ' + hist.length + '</p>';
+    var html = '';
     hist.slice(0, 100).forEach(function(h) {
       var amt = Number(h.amount) || 0;
       var color = amt > 0 ? '#16a34a' : (amt < 0 ? '#dc2626' : '#3b5bfd');
@@ -469,7 +479,7 @@ function renderAdminHistory() {
   });
 }
 
-/* ============ EXPOSE ============ */
+/* ==================== EXPOSE ==================== */
 window.openAdmin = openAdmin;
 window.switchAdminTab = switchAdminTab;
 window.approveDeposit = approveDeposit;

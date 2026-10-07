@@ -6,7 +6,7 @@
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'keckyxd_bonsicola');
 define('DB_USER', 'keckyxd_admin');
-define('DB_PASS', 'Minh@Tool2026#Xyz');
+define('DB_PASS', 'Admin@123456');
 
 /* ============ KHÔNG SỬA ============ */
 define('ADMIN_EMAIL', 'leminhdz@gmail.com');

@@ -9,8 +9,6 @@ function input() {
 function nowMs() { return round(microtime(true) * 1000); }
 function getIP() {
     if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) return trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
-    if (!empty($_SERVER['HTTP_X_REAL_IP'])) return $_SERVER['HTTP_X_REAL_IP'];
-    if (!empty($_SERVER['HTTP_CLIENT_IP'])) return $_SERVER['HTTP_CLIENT_IP'];
     return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 }
 function auth() {
@@ -48,7 +46,6 @@ switch ($action) {
         out(['success' => true, 'message' => 'API đang chạy', 'time' => nowMs()]);
         break;
 
-    /* ==================== CONFIG ==================== */
     case 'config_get': {
         try {
             $s = db()->prepare('SELECT v FROM config WHERE k = ?');
@@ -70,7 +67,6 @@ switch ($action) {
         out(['success' => true]);
     }
 
-    /* ==================== ĐĂNG KÝ ==================== */
     case 'register': {
         $em = strtolower(trim($in['email'] ?? ''));
         $pw = $in['password'] ?? '';
@@ -81,66 +77,52 @@ switch ($action) {
         $s = db()->prepare('SELECT id FROM users WHERE email = ?');
         $s->execute([$em]);
         if ($s->fetch()) out(['error' => 'Email đã được đăng ký!']);
-        $ip = getIP();
-        $now = nowMs();
         db()->prepare('INSERT INTO users (email, password, name, balance, key_expiry, is_admin, ip, last_login, created_at) VALUES (?, ?, ?, 0, 0, 0, ?, ?, ?)')
-            ->execute([$em, $pw, $nm, $ip, $now, $now]);
-        out(['success' => true, 'message' => 'Đăng ký thành công']);
+            ->execute([$em, $pw, $nm, getIP(), nowMs(), nowMs()]);
+        out(['success' => true]);
     }
 
-    /* ==================== ĐĂNG NHẬP ==================== */
     case 'login': {
         $em = strtolower(trim($in['email'] ?? ''));
         $pw = $in['password'] ?? '';
         if (!$em || !$pw) out(['error' => 'Vui lòng nhập đầy đủ!']);
-
         $s = db()->prepare('SELECT * FROM users WHERE email = ?');
         $s->execute([$em]);
         $u = $s->fetch();
-
         if (!$u && $em === strtolower(ADMIN_EMAIL) && $pw === ADMIN_PASS) {
             db()->prepare('INSERT INTO users (email, password, name, balance, key_expiry, is_admin, ip, last_login, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)')
-                ->execute([ADMIN_EMAIL, ADMIN_PASS, 'Admin BONSICOLA', 999999999, 9999999999999, getIP(), nowMs(), nowMs()]);
+                ->execute([ADMIN_EMAIL, ADMIN_PASS, 'Admin', 999999999, 9999999999999, getIP(), nowMs(), nowMs()]);
             $s->execute([$em]);
             $u = $s->fetch();
         }
         if (!$u || $u['password'] !== $pw) out(['error' => 'Sai email hoặc mật khẩu!']);
-
         if ($em === strtolower(ADMIN_EMAIL)) {
             db()->prepare('UPDATE users SET is_admin = 1 WHERE email = ?')->execute([$em]);
             $u['is_admin'] = 1;
         }
-        $ip = getIP();
-        $now = nowMs();
-        db()->prepare('UPDATE users SET ip = ?, last_login = ? WHERE email = ?')->execute([$ip, $now, $em]);
-        $u['ip'] = $ip;
-        $u['last_login'] = $now;
+        db()->prepare('UPDATE users SET ip = ?, last_login = ? WHERE email = ?')->execute([getIP(), nowMs(), $em]);
+        $u['ip'] = getIP();
+        $u['last_login'] = nowMs();
         unset($u['password']);
         out(['success' => true, 'user' => $u]);
     }
 
-    /* ==================== GET USER ==================== */
     case 'get_user': {
         $u = auth();
         unset($u['password']);
         out(['success' => true, 'user' => $u]);
     }
 
-    /* ==================== NẠP TIỀN ==================== */
     case 'deposit_create': {
         try {
             $u = auth();
             $amount = intval($in['amount'] ?? 0);
             $note = trim($in['note'] ?? '');
-            if ($amount < 10000) out(['error' => 'Số tiền tối thiểu 10,000đ!']);
-
+            if ($amount < 10000) out(['error' => 'Tối thiểu 10,000đ']);
             $id = 'dep_' . nowMs() . '_' . bin2hex(random_bytes(3));
-            $ip = getIP();
-
             db()->prepare('INSERT INTO deposits (id, email, amount, method, status, note, ip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-                ->execute([$id, $u['email'], $amount, 'bank', 'pending', $note, $ip, nowMs()]);
-
-            out(['success' => true, 'id' => $id, 'message' => 'Đã gửi yêu cầu nạp ' . number_format($amount) . 'đ']);
+                ->execute([$id, $u['email'], $amount, 'bank', 'pending', $note, getIP(), nowMs()]);
+            out(['success' => true, 'id' => $id, 'message' => 'Đã gửi yêu cầu nạp']);
         } catch (Exception $e) {
             out(['error' => 'Lỗi: ' . $e->getMessage()], 500);
         }
@@ -148,17 +130,8 @@ switch ($action) {
 
     case 'deposit_pending': {
         adminOnly();
-        $s = db()->query("
-            SELECT d.id, d.email, d.amount, d.method, d.status, d.note, d.ip, d.created_at,
-                   u.name AS user_name
-            FROM deposits d LEFT JOIN users u ON d.email = u.email
-            WHERE d.status = 'pending' ORDER BY d.created_at DESC
-        ");
-        $rows = $s->fetchAll();
-        foreach ($rows as &$r) {
-            if (empty($r['user_name'])) $r['user_name'] = explode('@', $r['email'])[0];
-        }
-        out(['success' => true, 'deposits' => $rows]);
+        $s = db()->query("SELECT d.*, u.name AS user_name FROM deposits d LEFT JOIN users u ON d.email=u.email WHERE d.status='pending' ORDER BY d.created_at DESC");
+        out(['success' => true, 'deposits' => $s->fetchAll()]);
     }
 
     case 'deposit_approve': {
@@ -167,8 +140,7 @@ switch ($action) {
         $s = db()->prepare('SELECT * FROM deposits WHERE id = ? AND status = ?');
         $s->execute([$id, 'pending']);
         $d = $s->fetch();
-        if (!$d) out(['error' => 'Không tìm thấy yêu cầu']);
-
+        if (!$d) out(['error' => 'Không tìm thấy']);
         $pdo = db();
         $pdo->beginTransaction();
         try {
@@ -176,16 +148,14 @@ switch ($action) {
             $s->execute([$d['email']]);
             $u = $s->fetch();
             if (!$u) throw new Exception('User không tồn tại');
-
-            $newBalance = $u['balance'] + $d['amount'];
-            $pdo->prepare('UPDATE users SET balance = ? WHERE email = ?')->execute([$newBalance, $d['email']]);
+            $newBal = $u['balance'] + $d['amount'];
+            $pdo->prepare('UPDATE users SET balance = ? WHERE email = ?')->execute([$newBal, $d['email']]);
             $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')
-                ->execute([$d['email'], 'deposit', $d['amount'], $newBalance, 'Nạp tiền', nowMs()]);
+                ->execute([$d['email'], 'deposit', $d['amount'], $newBal, 'Nạp tiền', nowMs()]);
             $pdo->prepare('UPDATE deposits SET status = ?, approved_at = ? WHERE id = ?')
                 ->execute(['approved', nowMs(), $id]);
-
             $pdo->commit();
-            out(['success' => true, 'new_balance' => $newBalance]);
+            out(['success' => true, 'new_balance' => $newBal]);
         } catch (Exception $e) {
             $pdo->rollBack();
             out(['error' => $e->getMessage()], 500);
@@ -196,28 +166,25 @@ switch ($action) {
         adminOnly();
         $id = $in['id'] ?? '';
         $reason = $in['reason'] ?? 'Không hợp lệ';
-        db()->prepare('UPDATE deposits SET status = ?, rejected_at = ?, note = ? WHERE id = ?')
+        db()->prepare('UPDATE deposits SET status=?, rejected_at=?, note=? WHERE id=?')
             ->execute(['rejected', nowMs(), $reason, $id]);
         out(['success' => true]);
     }
 
-    /* ==================== USERS ==================== */
     case 'user_list': {
         adminOnly();
-        $s = db()->query('SELECT id, email, name, balance, key_expiry, is_admin, ip, last_login, created_at FROM users ORDER BY is_admin DESC, last_login DESC');
+        $s = db()->query('SELECT id, email, name, balance, key_expiry, is_admin, ip, last_login, created_at FROM users ORDER BY is_admin DESC, created_at DESC');
         out(['success' => true, 'users' => $s->fetchAll()]);
     }
 
     case 'user_update': {
         adminOnly();
-        $target = strtolower(trim($in['target_email'] ?? $in['user_email'] ?? ''));
+        $target = strtolower(trim($in['target_email'] ?? ''));
         if (!$target) out(['error' => 'Thiếu email']);
         $sets = []; $vals = [];
         if (isset($in['balance'])) { $sets[] = 'balance = ?'; $vals[] = intval($in['balance']); }
         if (isset($in['key_expiry'])) { $sets[] = 'key_expiry = ?'; $vals[] = intval($in['key_expiry']); }
-        if (isset($in['is_admin'])) { $sets[] = 'is_admin = ?'; $vals[] = intval($in['is_admin']); }
-        if (isset($in['name'])) { $sets[] = 'name = ?'; $vals[] = $in['name']; }
-        if (!$sets) out(['error' => 'Không có gì cập nhật']);
+        if (!$sets) out(['error' => 'Không có gì']);
         $vals[] = $target;
         db()->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE email = ?')->execute($vals);
         out(['success' => true]);
@@ -233,41 +200,37 @@ switch ($action) {
         $u = $s->fetch();
         if (!$u) out(['error' => 'User không tồn tại']);
         $newBal = $u['balance'] + $delta;
-        if ($newBal < 0) out(['error' => 'Số dư sẽ âm']);
+        if ($newBal < 0) out(['error' => 'Số dư âm']);
         db()->prepare('UPDATE users SET balance = ? WHERE email = ?')->execute([$newBal, $target]);
         db()->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')
-            ->execute([$target, 'admin-adjust', $delta, $newBal, 'Admin ' . ($delta > 0 ? 'cộng' : 'trừ') . ' tiền', nowMs()]);
+            ->execute([$target, 'admin-adjust', $delta, $newBal, 'Admin cấp tiền', nowMs()]);
         out(['success' => true, 'new_balance' => $newBal]);
     }
 
     case 'user_reset_ip': {
         adminOnly();
-        $target = strtolower(trim($in['target_email'] ?? $in['user_email'] ?? ''));
-        if (!$target) out(['error' => 'Thiếu email']);
+        $target = strtolower(trim($in['target_email'] ?? ''));
         db()->prepare('UPDATE users SET ip = ? WHERE email = ?')->execute(['', $target]);
         out(['success' => true]);
     }
 
     case 'user_delete': {
         adminOnly();
-        $target = strtolower(trim($in['target_email'] ?? $in['user_email'] ?? ''));
-        if (!$target) out(['error' => 'Thiếu email']);
-        if ($target === strtolower(ADMIN_EMAIL)) out(['error' => 'Không thể xoá admin']);
+        $target = strtolower(trim($in['target_email'] ?? ''));
+        if ($target === strtolower(ADMIN_EMAIL)) out(['error' => 'Không xoá admin']);
         db()->prepare('DELETE FROM users WHERE email = ?')->execute([$target]);
         out(['success' => true]);
     }
 
-    /* ==================== KEYS ==================== */
     case 'key_create': {
         adminOnly();
         $days = max(1, intval($in['days'] ?? 1));
         $qty = min(100, max(1, intval($in['qty'] ?? 1)));
-        $note = trim($in['note'] ?? '');
         $created = [];
         for ($i = 0; $i < $qty; $i++) {
             $code = genKey();
             db()->prepare('INSERT INTO `keys` (code, days, note, created_at) VALUES (?, ?, ?, ?)')
-                ->execute([$code, $days, $note, nowMs()]);
+                ->execute([$code, $days, $in['note'] ?? '', nowMs()]);
             $created[] = $code;
         }
         out(['success' => true, 'keys' => $created]);
@@ -276,23 +239,22 @@ switch ($action) {
     case 'key_activate': {
         $u = auth();
         $code = strtoupper(trim($in['code'] ?? ''));
-        if (!$code) out(['error' => 'Vui lòng nhập key!']);
+        if (!$code) out(['error' => 'Nhập key']);
         $s = db()->prepare('SELECT * FROM `keys` WHERE code = ?');
         $s->execute([$code]);
         $k = $s->fetch();
-        if (!$k) out(['error' => 'Key không tồn tại!']);
-        if ($k['used']) out(['error' => 'Key đã sử dụng!']);
+        if (!$k) out(['error' => 'Key không tồn tại']);
+        if ($k['used']) out(['error' => 'Key đã dùng']);
         $base = ($u['key_expiry'] > nowMs()) ? $u['key_expiry'] : nowMs();
-        $newExpiry = $base + ($k['days'] * 24 * 3600 * 1000);
+        $newExp = $base + ($k['days'] * 24 * 3600 * 1000);
         $pdo = db();
         $pdo->beginTransaction();
-        $pdo->prepare('UPDATE users SET key_expiry = ? WHERE email = ?')->execute([$newExpiry, $u['email']]);
-        $pdo->prepare('UPDATE `keys` SET used = 1, used_by = ?, used_at = ? WHERE code = ?')
-            ->execute([$u['email'], nowMs(), $code]);
-        $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')
-            ->execute([$u['email'], 'key', 0, $u['balance'], 'Kích hoạt key +' . $k['days'] . ' ngày', nowMs()]);
+        $pdo->prepare('UPDATE users SET key_expiry = ? WHERE email = ?')->execute([$newExp, $u['email']]);
+        $pdo->prepare('UPDATE `keys` SET used=1, used_by=?, used_at=? WHERE code=?')->execute([$u['email'], nowMs(), $code]);
+        $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, 0, ?, ?, ?)')
+            ->execute([$u['email'], 'key', $u['balance'], 'Kích hoạt key +' . $k['days'] . 'd', nowMs()]);
         $pdo->commit();
-        out(['success' => true, 'days' => $k['days'], 'new_expiry' => $newExpiry]);
+        out(['success' => true, 'days' => $k['days'], 'new_expiry' => $newExp]);
     }
 
     case 'key_list': {
@@ -303,12 +265,10 @@ switch ($action) {
 
     case 'key_delete': {
         adminOnly();
-        $code = $in['code'] ?? '';
-        db()->prepare('DELETE FROM `keys` WHERE code = ?')->execute([$code]);
+        db()->prepare('DELETE FROM `keys` WHERE code = ?')->execute([$in['code'] ?? '']);
         out(['success' => true]);
     }
 
-    /* ==================== LỊCH SỬ ==================== */
     case 'history': {
         $u = auth();
         $s = db()->prepare('SELECT * FROM history WHERE email = ? ORDER BY at DESC LIMIT 100');
@@ -316,29 +276,27 @@ switch ($action) {
         out(['success' => true, 'history' => $s->fetchAll()]);
     }
 
-    /* ==================== MUA GÓI ==================== */
     case 'buy_package': {
         $u = auth();
         $days = intval($in['days'] ?? 0);
         $price = intval($in['price'] ?? 0);
-        if ($days < 1 || $price < 1) out(['error' => 'Gói không hợp lệ!']);
-        if ($u['balance'] < $price) out(['error' => 'Số dư không đủ!']);
+        if ($days < 1 || $price < 1) out(['error' => 'Gói không hợp lệ']);
+        if ($u['balance'] < $price) out(['error' => 'Số dư không đủ']);
         $base = ($u['key_expiry'] > nowMs()) ? $u['key_expiry'] : nowMs();
-        $newExpiry = $base + ($days * 24 * 3600 * 1000);
-        $newBalance = $u['balance'] - $price;
+        $newExp = $base + ($days * 24 * 3600 * 1000);
+        $newBal = $u['balance'] - $price;
         $pdo = db();
         $pdo->beginTransaction();
-        $pdo->prepare('UPDATE users SET balance = ?, key_expiry = ? WHERE email = ?')
-            ->execute([$newBalance, $newExpiry, $u['email']]);
+        $pdo->prepare('UPDATE users SET balance=?, key_expiry=? WHERE email=?')->execute([$newBal, $newExp, $u['email']]);
         $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')
-            ->execute([$u['email'], 'buy', -$price, $newBalance, 'Mua gói VIP ' . $days . ' ngày', nowMs()]);
+            ->execute([$u['email'], 'buy', -$price, $newBal, 'Mua VIP ' . $days . 'd', nowMs()]);
         $pdo->commit();
-        out(['success' => true, 'new_balance' => $newBalance, 'new_expiry' => $newExpiry]);
+        out(['success' => true, 'new_balance' => $newBal]);
     }
 
     case 'update_last_api': {
         $u = auth();
-        db()->prepare('UPDATE users SET last_api = ?, last_tool = ?, last_tool_at = ? WHERE email = ?')
+        db()->prepare('UPDATE users SET last_api=?, last_tool=?, last_tool_at=? WHERE email=?')
             ->execute([$in['api'] ?? '', $in['tool'] ?? '', nowMs(), $u['email']]);
         out(['success' => true]);
     }

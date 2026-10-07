@@ -1,8 +1,9 @@
-/*w ============================================================
-   CONFIG.JtxS — TỰ ĐỘNG NHẬmdN DOMAIN
+/* ============================================================
+   CONFIG.JS — TỰ ĐỘNG NHẬN DOMAIN RAILWAY
    ============================================================ */
 
 window.CONFIG = {
+  /* Tự động lấy domain hiện tại — chạy mọi nơi */
   API_BASE: (window.location.origin || '') + '/api',
   API_TIMEOUT: 15000,
 
@@ -10,7 +11,6 @@ window.CONFIG = {
   site_desc: 'Hệ Thống AI Phân Tích Dữ Liệu Thế Hệ Mới',
   marquee: '⚡ Hệ Thống AI Phân Tích Dữ Liệu Thế Hệ Mới ✦ 🔐 Nâng cấp VIP để mở full tool',
   footer: '© TOOL•MINHIOS',
-  support_link: '',
   logo: '',
   avatar: '',
   music_url: '',
@@ -31,16 +31,10 @@ window.CONFIG = {
 
   ports: [
     { name:"LC79 Tài Xỉu", slug:"lc79-tx", cat:"taixiu", kind:"view", game_url:"https://lc79.bet", api_url:"https://wtx.tele68.com/v1/tx/sessions", image:"https://files.catbox.moe/ng8pg8.jfif", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:0 },
-    { name:"LC79 MD5", slug:"lc79-md5", cat:"taixiu", kind:"view", game_url:"https://lc79.bet", api_url52.tele68.com/v1/txmd5/sessions", image:"https://files.catbox.moe/ng8pg8.jfif", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:1 },
+    { name:"LC79 MD5", slug:"lc79-md5", cat:"taixiu", kind:"view", game_url:"https://lc79.bet", api_url:"https://wtxmd52.tele68.com/v1/txmd5/sessions", image:"https://files.catbox.moe/ng8pg8.jfif", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:1 },
     { name:"BetVip Hũ", slug:"betvip-hu", cat:"taixiu", kind:"view", game_url:"https://play.betvip.hot/", api_url:"https://wtx.macminim6.online/v1/tx/sessions", image:"https://files.catbox.moe/2gu29f.jpg", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:2 },
-    { name:"BetVip MD5", slug:"betvip-md5", cat:"taixiu", kind:"view", game_url:"https://play.betvip.hot/", api_url:"https://wtxmd52.macminim6.online/v1/txmd5/sessions", image:"https://files.catbox.moe/2gu29f.jpg", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:3 },
-    { name:"Sunwin Tài Xỉu", slug:"sunwin-tx", cat:"taixiu", kind:"view", game_url:"https://web.sunwin.radio/?affId=Sunwin", api_url:"https://cancer-counted-board-dam.trycloudflare.com/api/taixiu/history", image:"https://files.catbox.moe/ny0ayd.jpg", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:4 },
-    { name:"Sunwin Sicbo", slug:"sunwin-sicbo", cat:"sicbo", kind:"view", game_url:"https://web.sunwin.radio/?affId=Sunwin", api_url:"https://api.wsktnus8.net/v2/history/getLastResult?gameId=ktrng_3979&size=100&tableId=39791215743193&curPage=1", image:"https://files.catbox.moe/61ohn2.jpg", hot:0, vip:1, is_new:0, enabled:1, maintenance:0, sort:5 },
-    { name:"Max789 Hũ", slug:"max789-hu", cat:"taixiu", kind:"view", game_url:"https://play.max789.vin/", api_url:"https://taixiu.maksh3979madfw.com/api/luckydice/GetSoiCau", image:"https://files.catbox.moe/lsz8db.jpg", hot:1, vip:1, is_new:1, enabled:1, maintenance:0, sort:6 },
-    { name:"Max789 MD5", slug:"max789-md5", cat:"taixiu", kind:"view", game_url:"https://play.max789.vin/", api_url:"https://max789-nqfd.onrender.com/api/taixiumd5/max789", image:"https://files.catbox.moe/lsz8db.jpg", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:7 },
-    { name:"789Club Sicbo", slug:"789-sicbo", cat:"sicbo", kind:"view", game_url:"", api_url:"https://api.xeuigogo.info/v2/history/getLastResult?gameId=ktrng_3986&size=100&tableId=39861215743193&curPage=1", image:"https://files.catbox.moe/jx3lid.jpg", hot:0, vip:1, is_new:0, enabled:1, maintenance:0, sort:8 },
-    { name:"Hitclub Tài Xỉu", slug:"hit-tx", cat:"taixiu", kind:"panel", game_url:"", api_url:"https://draw-prisoner-bathroom-anthony.trycloudflare.com/api/hit_tx/history", image:"https://files.catbox.moe/w2lk5r.jpg", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:9 },
-    { name:"B52 Tài Xỉu", slug:"b52-tx", cat:"taixiu", kind:"panel", game_url:"", api_url:"https://draw-prisoner-bathroom-anthony.trycloudflare.com/api/b52_tx/history", image:"https://files.catbox.moe/yfwwxu.jpg", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:10 },
-    { name:"Baccarat AI", slug:"baccarat", cat:"baccarat", kind:"baccarat", game_url:"https://fly88m.cc/", api_url:"https://apisieunhanh.lovable.app/api/public/bYoIEro5CgRHbfQ0qBgcYJYy1rfUTRafwqcZh0ta/apibaccarat", image:"https://files.catbox.moe/5ughb8.png", hot:1, vip:1, is_new:1, enabled:1, maintenance:0, sort:11 }
+    { name:"Sunwin Tài Xỉu", slug:"sunwin-tx", cat:"taixiu", kind:"view", game_url:"https://web.sunwin.radio/?affId=Sunwin", api_url:"https://cancer-counted-board-dam.trycloudflare.com/api/taixiu/history", image:"https://files.catbox.moe/ny0ayd.jpg", hot:1, vip:1, is_new:0, enabled:1, maintenance:0, sort:3 },
+    { name:"Max789 Hũ", slug:"max789-hu", cat:"taixiu", kind:"view", game_url:"https://play.max789.vin/", api_url:"https://taixiu.maksh3979madfw.com/api/luckydice/GetSoiCau", image:"https://files.catbox.moe/lsz8db.jpg", hot:1, vip:1, is_new:1, enabled:1, maintenance:0, sort:4 },
+    { name:"Baccarat AI", slug:"baccarat", cat:"baccarat", kind:"baccarat", game_url:"https://fly88m.cc/", api_url:"https://apisieunhanh.lovable.app/api/public/bYoIEro5CgRHbfQ0qBgcYJYy1rfUTRafwqcZh0ta/apibaccarat", image:"https://files.catbox.moe/5ughb8.png", hot:1, vip:1, is_new:1, enabled:1, maintenance:0, sort:5 }
   ]
 };

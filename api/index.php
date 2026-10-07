@@ -41,9 +41,8 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $in = input();
 
 switch ($action) {
-
     case 'ping':
-        out(['success' => true, 'message' => 'API đang chạy', 'time' => nowMs()]);
+        out(['success' => true, 'message' => 'API đang chạy', 'time' => nowMs(), 'host' => DB_HOST]);
         break;
 
     case 'config_get': {
@@ -60,7 +59,7 @@ switch ($action) {
     case 'config_save': {
         adminOnly();
         $cfg = $in['config'] ?? null;
-        if (!$cfg || !is_array($cfg)) out(['error' => 'Config không hợp lệ']);
+        if (!$cfg) out(['error' => 'Config không hợp lệ']);
         $json = json_encode($cfg, JSON_UNESCAPED_UNICODE);
         db()->prepare('INSERT INTO config (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = ?')
             ->execute(['main', $json, $json]);
@@ -71,12 +70,12 @@ switch ($action) {
         $em = strtolower(trim($in['email'] ?? ''));
         $pw = $in['password'] ?? '';
         $nm = trim($in['name'] ?? '') ?: explode('@', $em)[0];
-        if (!$em || !$pw) out(['error' => 'Vui lòng nhập đầy đủ!']);
-        if (!filter_var($em, FILTER_VALIDATE_EMAIL)) out(['error' => 'Email không hợp lệ!']);
-        if (strlen($pw) < 6) out(['error' => 'Mật khẩu từ 6 ký tự!']);
+        if (!$em || !$pw) out(['error' => 'Nhập đầy đủ!']);
+        if (!filter_var($em, FILTER_VALIDATE_EMAIL)) out(['error' => 'Email không hợp lệ']);
+        if (strlen($pw) < 6) out(['error' => 'Mật khẩu từ 6 ký tự']);
         $s = db()->prepare('SELECT id FROM users WHERE email = ?');
         $s->execute([$em]);
-        if ($s->fetch()) out(['error' => 'Email đã được đăng ký!']);
+        if ($s->fetch()) out(['error' => 'Email đã đăng ký']);
         db()->prepare('INSERT INTO users (email, password, name, balance, key_expiry, is_admin, ip, last_login, created_at) VALUES (?, ?, ?, 0, 0, 0, ?, ?, ?)')
             ->execute([$em, $pw, $nm, getIP(), nowMs(), nowMs()]);
         out(['success' => true]);
@@ -85,7 +84,7 @@ switch ($action) {
     case 'login': {
         $em = strtolower(trim($in['email'] ?? ''));
         $pw = $in['password'] ?? '';
-        if (!$em || !$pw) out(['error' => 'Vui lòng nhập đầy đủ!']);
+        if (!$em || !$pw) out(['error' => 'Nhập đầy đủ!']);
         $s = db()->prepare('SELECT * FROM users WHERE email = ?');
         $s->execute([$em]);
         $u = $s->fetch();
@@ -95,21 +94,19 @@ switch ($action) {
             $s->execute([$em]);
             $u = $s->fetch();
         }
-        if (!$u || $u['password'] !== $pw) out(['error' => 'Sai email hoặc mật khẩu!']);
+        if (!$u || $u['password'] !== $pw) out(['error' => 'Sai email hoặc mật khẩu']);
         if ($em === strtolower(ADMIN_EMAIL)) {
             db()->prepare('UPDATE users SET is_admin = 1 WHERE email = ?')->execute([$em]);
             $u['is_admin'] = 1;
         }
         db()->prepare('UPDATE users SET ip = ?, last_login = ? WHERE email = ?')->execute([getIP(), nowMs(), $em]);
-        $u['ip'] = getIP();
-        $u['last_login'] = nowMs();
+        $u['ip'] = getIP(); $u['last_login'] = nowMs();
         unset($u['password']);
         out(['success' => true, 'user' => $u]);
     }
 
     case 'get_user': {
-        $u = auth();
-        unset($u['password']);
+        $u = auth(); unset($u['password']);
         out(['success' => true, 'user' => $u]);
     }
 
@@ -152,8 +149,7 @@ switch ($action) {
             $pdo->prepare('UPDATE users SET balance = ? WHERE email = ?')->execute([$newBal, $d['email']]);
             $pdo->prepare('INSERT INTO history (email, type, amount, balance, note, at) VALUES (?, ?, ?, ?, ?, ?)')
                 ->execute([$d['email'], 'deposit', $d['amount'], $newBal, 'Nạp tiền', nowMs()]);
-            $pdo->prepare('UPDATE deposits SET status = ?, approved_at = ? WHERE id = ?')
-                ->execute(['approved', nowMs(), $id]);
+            $pdo->prepare('UPDATE deposits SET status=?, approved_at=? WHERE id=?')->execute(['approved', nowMs(), $id]);
             $pdo->commit();
             out(['success' => true, 'new_balance' => $newBal]);
         } catch (Exception $e) {
@@ -166,8 +162,7 @@ switch ($action) {
         adminOnly();
         $id = $in['id'] ?? '';
         $reason = $in['reason'] ?? 'Không hợp lệ';
-        db()->prepare('UPDATE deposits SET status=?, rejected_at=?, note=? WHERE id=?')
-            ->execute(['rejected', nowMs(), $reason, $id]);
+        db()->prepare('UPDATE deposits SET status=?, rejected_at=?, note=? WHERE id=?')->execute(['rejected', nowMs(), $reason, $id]);
         out(['success' => true]);
     }
 
